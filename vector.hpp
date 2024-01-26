@@ -7,7 +7,16 @@
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
-#include "iterator.hpp"
+
+enum class Direction: int {
+    Straight = 1,
+    Reverse = -1
+};
+
+enum class Mutability: int {
+    Constant,
+    Mutable
+};
 
 template <class T>
 class Vector {
@@ -34,4 +43,27 @@ public:
     constexpr Vector();
     explicit constexpr Vector(size_type count);
     Vector(size_type count, const_reference val);
+    Vector(size_type count, const_pointer arr);
+    Vector(std::initializer_list<T> init);
+    Vector(const Vector& other);
+    constexpr void swap(Vector& other) noexcept;
+    Vector& operator=(const Vector& other) & noexcept;
+    ~Vector();
+    constexpr size_type size() const noexcept;
+    constexpr size_type capacity() const noexcept;
+    constexpr bool empty() const noexcept;
+    const_pointer data() const noexcept;
+    pointer data() noexcept;
+    const_iterator begin() const noexcept;
+    iterator begin() noexcept;
+    const_iterator cbegin() const noexcept;
+    const_reverse_iterator rbegin() const noexcept;
+    reverse_iterator rbegin() noexcept;
+    const_reverse_iterator crbegin() const noexcept;
+    const_iterator end() const noexcept;
+    iterator end() noexcept;
+    const_iterator cend() const noexcept;
+    const_reverse_iterator rend() const noexcept;
+    reverse_iterator rend() noexcept;
+    const_reverse_iterator crend() const noexcept;
 };
