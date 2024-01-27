@@ -41,4 +41,14 @@ public:
     directed_iterator& operator--() & noexcept;
     directed_iterator operator++(int) & noexcept;
     directed_iterator operator--(int) & noexcept;
+    friend directed_iterator operator+(const directed_iterator& it, difference_type n);
+    friend directed_iterator operator+(difference_type n, const directed_iterator& it);
+    friend difference_type operator-(const directed_iterator& it1, const directed_iterator& it2);
+    friend directed_iterator operator-(const directed_iterator& it, difference_type n);
+    friend bool operator<(const directed_iterator& it1, const directed_iterator& it2);
+    friend bool operator>(const directed_iterator& it1, const directed_iterator& it2);
+    friend bool operator<=(const directed_iterator& it1, const directed_iterator& it2);
+    friend bool operator>=(const directed_iterator& it1, const directed_iterator& it2);
+    friend bool operator==(const directed_iterator& it1, const directed_iterator& it2);
+    friend bool operator!=(const directed_iterator& it1, const directed_iterator& it2);
 };
