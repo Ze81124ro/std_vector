@@ -47,7 +47,7 @@ constexpr void Vector<T>::swap(Vector& other) noexcept {
 }
 
 template <class T>
-Vector<T>& Vector<T>::operator=(const Vector& other) & noexcept {
+auto Vector<T>::operator=(const Vector& other) & noexcept -> Vector& {
     Vector copy = other;
     swap(copy);
     return *this;
@@ -61,12 +61,12 @@ Vector<T>::~Vector() {
 }
 
 template <class T>
-constexpr Vector<T>::size_type Vector<T>::size() const noexcept {
+constexpr auto Vector<T>::size() const noexcept -> size_type {
     return sz;
 }
 
 template <class T>
-constexpr Vector<T>::size_type Vector<T>::capacity() const noexcept {
+constexpr auto Vector<T>::capacity() const noexcept -> size_type {
     return cap;
 }
 
@@ -76,71 +76,71 @@ constexpr bool Vector<T>::empty() const noexcept {
 }
 
 template <class T>
-Vector<T>::const_pointer Vector<T>::data() const noexcept {
+auto Vector<T>::data() const noexcept -> const_pointer {
     return ptr;
 }
 
 template <class T>
-Vector<T>::pointer Vector<T>::data() noexcept {
+auto Vector<T>::data() noexcept -> pointer {
     return ptr;
 }
 
 template <class T>
-Vector<T>::const_iterator Vector<T>::begin() const noexcept {
+auto Vector<T>::begin() const noexcept -> const_iterator {
     return data();
 }
 
 template <class T>
-Vector<T>::iterator Vector<T>::begin() noexcept {
+auto Vector<T>::begin() noexcept -> iterator {
     return data();
 }
 
 template <class T>
-Vector<T>::const_iterator Vector<T>::cbegin() const noexcept {
+auto Vector<T>::cbegin() const noexcept -> const_iterator {
     return data();
 }
 
 template <class T>
-Vector<T>::const_reverse_iterator Vector<T>::rbegin() const noexcept {
-    return data();
+auto Vector<T>::rbegin() const noexcept -> const_reverse_iterator {
+    return data() + sz - 1;
 }
 
 template <class T>
-Vector<T>::reverse_iterator Vector<T>::rbegin() noexcept {
-    return data();
+auto Vector<T>::rbegin() noexcept -> reverse_iterator {
+    return data() + sz - 1;
 }
 
 template <class T>
-Vector<T>::const_reverse_iterator Vector<T>::crbegin() const noexcept {
-    return data();
+auto Vector<T>::crbegin() const noexcept -> const_reverse_iterator {
+    return data() + sz - 1;
 }
 
 template <class T>
-Vector<T>::const_iterator Vector<T>::end() const noexcept {
+auto Vector<T>::end() const noexcept -> const_iterator {
     return data() + sz;
 }
 
 template <class T>
-Vector<T>::iterator Vector<T>::end() noexcept {
+auto Vector<T>::end() noexcept -> iterator {
     return data() + sz;
 }
 
 template <class T>
-Vector<T>::const_iterator Vector<T>::cend() const noexcept {
+auto Vector<T>::cend() const noexcept -> const_iterator {
     return data() + sz;
 }
 
 template <class T>
-Vector<T>::const_reverse_iterator Vector<T>::rend() const noexcept {
-    return data() + sz;
+auto Vector<T>::rend() const noexcept -> const_reverse_iterator {
+    return data() - 1;
 }
 
 template <class T>
-Vector<T>::reverse_iterator Vector<T>::rend() noexcept {
-    return data() + sz;
+auto Vector<T>::rend() noexcept -> reverse_iterator {
+    return data() - 1;
 }
 
 template <class T>
-Vector<T>::const_reverse_iterator Vector<T>::crend() const noexcept {
-    return data() + sz;
+auto Vector<T>::crend() const noexcept -> const_reverse_iterator {
+    return data() - 1;
 }
