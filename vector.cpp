@@ -76,71 +76,120 @@ constexpr bool Vector<T>::empty() const noexcept {
 }
 
 template <class T>
-auto Vector<T>::data() const noexcept -> const_pointer {
+constexpr auto Vector<T>::data() const noexcept -> const_pointer {
     return ptr;
 }
 
 template <class T>
-auto Vector<T>::data() noexcept -> pointer {
+constexpr auto Vector<T>::data() noexcept -> pointer {
     return ptr;
 }
 
 template <class T>
-auto Vector<T>::begin() const noexcept -> const_iterator {
-    return data();
+constexpr auto Vector<T>::begin() const noexcept -> const_iterator {
+    return ptr;
 }
 
 template <class T>
-auto Vector<T>::begin() noexcept -> iterator {
-    return data();
+constexpr auto Vector<T>::begin() noexcept -> iterator {
+    return ptr;
 }
 
 template <class T>
-auto Vector<T>::cbegin() const noexcept -> const_iterator {
-    return data();
+constexpr auto Vector<T>::cbegin() const noexcept -> const_iterator {
+    return ptr;
 }
 
 template <class T>
-auto Vector<T>::rbegin() const noexcept -> const_reverse_iterator {
-    return data() + sz - 1;
+constexpr auto Vector<T>::rbegin() const noexcept -> const_reverse_iterator {
+    return ptr + sz - 1;
 }
 
 template <class T>
-auto Vector<T>::rbegin() noexcept -> reverse_iterator {
-    return data() + sz - 1;
+constexpr auto Vector<T>::rbegin() noexcept -> reverse_iterator {
+    return ptr + sz - 1;
 }
 
 template <class T>
-auto Vector<T>::crbegin() const noexcept -> const_reverse_iterator {
-    return data() + sz - 1;
+constexpr auto Vector<T>::crbegin() const noexcept -> const_reverse_iterator {
+    return ptr + sz - 1;
 }
 
 template <class T>
-auto Vector<T>::end() const noexcept -> const_iterator {
-    return data() + sz;
+constexpr auto Vector<T>::end() const noexcept -> const_iterator {
+    return ptr + sz;
 }
 
 template <class T>
-auto Vector<T>::end() noexcept -> iterator {
-    return data() + sz;
+constexpr auto Vector<T>::end() noexcept -> iterator {
+    return ptr + sz;
 }
 
 template <class T>
-auto Vector<T>::cend() const noexcept -> const_iterator {
-    return data() + sz;
+constexpr auto Vector<T>::cend() const noexcept -> const_iterator {
+    return ptr + sz;
 }
 
 template <class T>
-auto Vector<T>::rend() const noexcept -> const_reverse_iterator {
-    return data() - 1;
+constexpr auto Vector<T>::rend() const noexcept -> const_reverse_iterator {
+    return ptr - 1;
 }
 
 template <class T>
-auto Vector<T>::rend() noexcept -> reverse_iterator {
-    return data() - 1;
+constexpr auto Vector<T>::rend() noexcept -> reverse_iterator {
+    return ptr - 1;
 }
 
 template <class T>
-auto Vector<T>::crend() const noexcept -> const_reverse_iterator {
-    return data() - 1;
+constexpr auto Vector<T>::crend() const noexcept -> const_reverse_iterator {
+    return ptr - 1;
 }
+
+template <class T>
+constexpr auto Vector<T>::operator[](size_type idx) const noexcept -> const_reference {
+    return *(begin() + idx);
+}
+
+template <class T>
+constexpr auto Vector<T>::operator[](size_type idx) noexcept -> reference {
+    return *(begin() + idx);
+}
+
+template <class T>
+constexpr auto Vector<T>::at(size_type idx) const -> const_reference {
+    if (idx >= sz) throw std::out_of_range("");
+    else return (*this)[idx];
+}
+
+template <class T>
+constexpr auto Vector<T>::at(size_type idx) -> reference {
+    if (idx >= sz) throw std::out_of_range("");
+    else return (*this)[idx];
+}
+
+template <class T>
+constexpr auto Vector<T>::front() const noexcept -> const_reference {
+    return *begin();
+}
+
+template <class T>
+constexpr auto Vector<T>::front() noexcept -> reference {
+    return *begin();
+}
+
+template <class T>
+constexpr auto Vector<T>::back() const noexcept -> const_reference {
+    return *--end();
+}
+
+template <class T>
+constexpr auto Vector<T>::back() noexcept -> reference {
+    return *--end();
+}
+
+// template <class... Args>
+// constexpr auto emplace(const_iterator pos, Args&&... args) -> iterator
+// template <class... Args>
+// constexpr reference emplace_back(Args&&... args);
+// constexpr iterator insert(const_iterator pos, const_reference value);
+// void push_back(const_reference value);
