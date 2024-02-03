@@ -3,22 +3,13 @@
 #include <exception>
 #include <initializer_list>
 #include <iterator>
+#include <memory>
 #include <new>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 
-enum class Direction: int {
-    Straight = 1,
-    Reverse = -1
-};
-
-enum class Mutability: int {
-    Constant,
-    Mutable
-};
-
-template <class T>
+template <class T, class Allocator>
 class Vector {
 private:
     static const int INITIAL_CAP = 1;
@@ -26,9 +17,10 @@ private:
     size_t cap = INITIAL_CAP;
     size_t sz = 0;
     T* ptr = reinterpret_cast<T*>(new uint8_t[cap * sizeof(T)]);
-    template <Direction dir, Mutability mut>
-    class directed_iterator;
+    const Allocator& alloc;
+    using AllocTraits = std::allocator_traits<Allocator>;
 public:
+    using allocator_type = Allocator;
     using value_type = T;
     using size_type = size_t;
     using difference_type = std::ptrdiff_t;
@@ -36,10 +28,10 @@ public:
     using const_reference = const T&;
     using pointer = T*;
     using const_pointer = const T*;
-    using iterator = directed_iterator<Direction::Straight, Mutability::Mutable>;
-    using const_iterator = directed_iterator<Direction::Straight, Mutability::Constant>;
-    using reverse_iterator = directed_iterator<Direction::Reverse, Mutability::Mutable>;
-    using const_reverse_iterator = directed_iterator<Direction::Reverse, Mutability::Constant>;
+    using iterator = T*;
+    using const_iterator = const T*;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
     constexpr Vector();
     explicit constexpr Vector(size_type count);
     Vector(size_type count, const_reference val);
@@ -52,18 +44,33 @@ public:
     constexpr size_type size() const noexcept;
     constexpr size_type capacity() const noexcept;
     constexpr bool empty() const noexcept;
-    const_pointer data() const noexcept;
-    pointer data() noexcept;
-    const_iterator begin() const noexcept;
-    iterator begin() noexcept;
-    const_iterator cbegin() const noexcept;
-    const_reverse_iterator rbegin() const noexcept;
-    reverse_iterator rbegin() noexcept;
-    const_reverse_iterator crbegin() const noexcept;
-    const_iterator end() const noexcept;
-    iterator end() noexcept;
-    const_iterator cend() const noexcept;
-    const_reverse_iterator rend() const noexcept;
-    reverse_iterator rend() noexcept;
-    const_reverse_iterator crend() const noexcept;
+    constexpr const_pointer data() const noexcept;
+    constexpr pointer data() noexcept;
+    constexpr const_iterator begin() const noexcept;
+    constexpr iterator begin() noexcept;
+    constexpr const_iterator cbegin() const noexcept;
+    constexpr const_reverse_iterator rbegin() const noexcept;
+    constexpr reverse_iterator rbegin() noexcept;
+    constexpr const_reverse_iterator crbegin() const noexcept;
+    constexpr const_iterator end() const noexcept;
+    constexpr iterator end() noexcept;
+    constexpr const_iterator cend() const noexcept;
+    constexpr const_reverse_iterator rend() const noexcept;
+    constexpr reverse_iterator rend() noexcept;
+    constexpr const_reverse_iterator crend() const noexcept;
+    constexpr const_reference operator[](size_type idx) const noexcept;
+    constexpr reference operator[](size_type idx) noexcept;
+    constexpr const_reference at(size_type idx) const;
+    constexpr reference at(size_type idx);
+    constexpr const_reference front() const noexcept;
+    constexpr reference front() noexcept;
+    constexpr const_reference back() const noexcept;
+    constexpr reference back() noexcept;
+    constexpr void reserve(size_type count);
+    template <class... Args>
+    constexpr iterator emplace(const_iterator pos, Args&&... args);
+    template <class... Args>
+    constexpr reference emplace_back(Args&&... args);
+    constexpr iterator insert(const_iterator pos, const_reference value);
+    void push_back(const_reference value);
 };
