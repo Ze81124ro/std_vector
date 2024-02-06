@@ -12,13 +12,14 @@
 template <class T, class Allocator>
 class Vector {
 private:
+    using rvalue_reference = T&&;
+    using AllocTraits = std::allocator_traits<Allocator>;
     static const int INITIAL_CAP = 1;
     static const int GROWTH_RATE = 2;
-    size_t cap = INITIAL_CAP;
+    size_t cap = 0;
     size_t sz = 0;
-    T* ptr = reinterpret_cast<T*>(new uint8_t[cap * sizeof(T)]);
     const Allocator& alloc;
-    using AllocTraits = std::allocator_traits<Allocator>;
+    T* ptr = nullptr;
 public:
     using allocator_type = Allocator;
     using value_type = T;
@@ -32,12 +33,16 @@ public:
     using const_iterator = const T*;
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-    constexpr Vector();
-    explicit constexpr Vector(size_type count);
-    Vector(size_type count, const_reference val);
-    Vector(size_type count, const_pointer arr);
-    Vector(std::initializer_list<T> init);
+    constexpr Vector() noexcept(noexcept(Allocator()));
+    constexpr explicit Vector(const Allocator& alloc) noexcept;
+    explicit constexpr Vector(size_type count, const Allocator& alloc = Allocator());
+    Vector(size_type count, const_reference val, const Allocator& alloc = Allocator());
+    Vector(size_type count, rvalue_reference value, const Allocator& alloc = Allocator());
+    Vector(size_type count, const_pointer arr, const Allocator& alloc = Allocator());
+    Vector(std::initializer_list<T> init, const Allocator& alloc = Allocator());
+    Vector(const Vector& other, const Allocator& alloc);
     Vector(const Vector& other);
+    Vector(Vector&& other) noexcept;
     constexpr void swap(Vector& other) noexcept;
     Vector& operator=(const Vector& other) & noexcept;
     ~Vector();
