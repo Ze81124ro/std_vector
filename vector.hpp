@@ -35,14 +35,15 @@ public:
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
     constexpr Vector() noexcept(noexcept(Allocator()));
     constexpr explicit Vector(const Allocator& alloc) noexcept;
-    explicit constexpr Vector(size_type count, const Allocator& alloc = Allocator());
+    constexpr explicit Vector(size_type count, const Allocator& alloc = Allocator());
     Vector(size_type count, const_reference val, const Allocator& alloc = Allocator());
-    Vector(size_type count, rvalue_reference value, const Allocator& alloc = Allocator());
-    Vector(size_type count, const_pointer arr, const Allocator& alloc = Allocator());
-    Vector(std::initializer_list<T> init, const Allocator& alloc = Allocator());
-    Vector(const Vector& other, const Allocator& alloc);
-    Vector(const Vector& other);
-    Vector(Vector&& other) noexcept;
+    constexpr Vector(std::initializer_list<T> init, const Allocator& alloc = Allocator());
+    template <class InputIt>
+    Vector(InputIt first, InputIt last, const Allocator& alloc = Allocator());
+    constexpr Vector(const Vector& other, const Allocator& alloc);
+    constexpr Vector(const Vector& other);
+    Vector(Vector&& other, const Allocator& alloc);
+    constexpr Vector(Vector&& other) noexcept;
     constexpr void swap(Vector& other) noexcept;
     Vector& operator=(const Vector& other) & noexcept;
     ~Vector();
@@ -51,6 +52,7 @@ public:
     constexpr bool empty() const noexcept;
     constexpr const_pointer data() const noexcept;
     constexpr pointer data() noexcept;
+    constexpr allocator_type get_allocator() noexcept;
     constexpr const_iterator begin() const noexcept;
     constexpr iterator begin() noexcept;
     constexpr const_iterator cbegin() const noexcept;
