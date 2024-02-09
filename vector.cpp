@@ -10,7 +10,7 @@ Vector(Allocator()) {}
 
 template <class T, class Allocator>
 constexpr Vector<T, Allocator>::Vector(size_type count, const Allocator& alloc): 
-sz(count), alloc(alloc) {
+cap(1), sz(count), alloc(alloc) {
     while (cap < sz) cap *= GROWTH_RATE;
     ptr = AllocTraits::allocate(alloc, cap);
 }
@@ -24,50 +24,50 @@ Vector(count, alloc) {
         } catch(...) {
             for (size_type j = 0; j < i; ++j)
                 AllocTraits::destroy(alloc, ptr + j);
+            throw;
         }
     }
 }
 
 template <class T, class Allocator>
-Vector<T, Allocator>::Vector(size_type count, rvalue_reference value, const Allocator& alloc):
-Vector(count, alloc) {
-    for (size_type i = 0; i < sz; ++i) {
-        try {
-            AllocTraits::construct(alloc, ptr + i, std::move(value));
-        } catch(...) {
-            for (size_type j = 0; j < i; ++j)
-                AllocTraits::destroy(alloc, ptr + j);
-        }
-    }
-}
-
-template <class T, class Allocator>
-Vector<T, Allocator>::Vector(size_type count, const_pointer arr, const Allocator& alloc): 
-Vector(count, alloc) {
-    for (size_type i = 0; i < sz; ++i) {
-        try {
-            AllocTraits::construct(alloc, ptr + i, arr[i]);
-        } catch(...) {
-            for (size_type j = 0; j < i; ++j)
-                AllocTraits::destroy(ptr + j);
-        }
-    }
-}
-
-template <class T, class Allocator>
-Vector<T, Allocator>::Vector(std::initializer_list<T> init, const Allocator& alloc): 
+constexpr Vector<T, Allocator>::Vector(std::initializer_list<T> init, const Allocator& alloc): 
 Vector(init.size(), init.begin(), alloc) {}
 
 template <class T, class Allocator>
-Vector<T, Allocator>::Vector(const Vector& other, const Allocator& alloc): 
+template <class InputIt>
+Vector<T, Allocator>::Vector(InputIt first, InputIt last, const Allocator& alloc):
+alloc(alloc) {
+    using category = typename std::iterator_traits<InputIt>::iterator_category;
+    if constexpr (std::is_base_of_v<category, std::random_access_iterator_tag>)
+        reserve(last - first);
+    for (InputIt it = first; it != last; ++it)
+        push_back(*it);
+}
+
+template <class T, class Allocator>
+constexpr Vector<T, Allocator>::Vector(const Vector& other, const Allocator& alloc): 
 Vector(other.sz, other.ptr, alloc) {}
 
 template <class T, class Allocator>
-Vector<T, Allocator>::Vector(const Vector& other):
+constexpr Vector<T, Allocator>::Vector(const Vector& other):
 Vector(other, AllocTraits::select_on_container_copy_construction(other.alloc)) {}
 
 template <class T, class Allocator>
-Vector<T, Allocator>::Vector(Vector&& other) noexcept:
+Vector<T, Allocator>::Vector(Vector&& other, const Allocator& alloc):
+cap(other.cap), sz(other.sz), alloc(std::move(alloc)), ptr(AllocTraits::allocate(alloc, cap)) {
+    for (int i = 0; i < sz; ++i) {
+        try {
+            AllocTraits::construct(alloc, ptr + i, *(other.ptr + i));
+        } catch(...) {
+            for (int j = 0; j < i; ++j)
+                AllocTraits::destroy(alloc, ptr + j);
+            throw;
+        }
+    }
+}
+
+template <class T, class Allocator>
+constexpr Vector<T, Allocator>::Vector(Vector&& other) noexcept:
 cap(other.cap), sz(other.sz), alloc(std::move(other.alloc)), ptr(other.ptr) {
     other.cap = 0;
     other.sz = 0;
@@ -93,8 +93,8 @@ template <class T, class Allocator>
 Vector<T, Allocator>::~Vector() {
     if (ptr == nullptr) return;
     for (size_type i = 0; i < sz; ++i)
-        (ptr + i)->~T();
-    delete[] reinterpret_cast<uint8_t*>(ptr);
+        AllocTraits::destroy(alloc, ptr + i);
+    AllocTraits::deallocate(alloc, ptr, cap);
 }
 
 template <class T, class Allocator>
@@ -120,6 +120,12 @@ constexpr auto Vector<T, Allocator>::data() const noexcept -> const_pointer {
 template <class T, class Allocator>
 constexpr auto Vector<T, Allocator>::data() noexcept -> pointer {
     return ptr;
+}
+
+
+template <class T, class Allocator>
+constexpr auto Vector<T, Allocator>::get_allocator() noexcept -> allocator_type {
+    return alloc;l
 }
 
 template <class T, class Allocator>
@@ -222,6 +228,11 @@ constexpr auto Vector<T, Allocator>::back() const noexcept -> const_reference {
 template <class T, class Allocator>
 constexpr auto Vector<T, Allocator>::back() noexcept -> reference {
     return *--end();
+}
+
+template <class T, class Allocator>
+void Vector<T, Allocator>::reserve(size_type new_cap) {
+    
 }
 
 // template <class... Args>
