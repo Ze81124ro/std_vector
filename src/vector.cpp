@@ -80,7 +80,7 @@ constexpr auto Vector<T, Alloc>::cbegin() const noexcept -> const T* {
 
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::rbegin() noexcept -> reverse_iterator {
-    return cend();
+    return end();
 }
 
 template <class T, class Alloc>
@@ -100,7 +100,7 @@ constexpr auto Vector<T, Alloc>::cend() const noexcept -> const T* {
 
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::rend() noexcept -> reverse_iterator {
-    return cbegin();
+    return begin();
 }
 
 template <class T, class Alloc>
