@@ -49,4 +49,6 @@ private:
     T* ptr = nullptr;
 };
 
+#include "vector.cpp"
+
 #endif
