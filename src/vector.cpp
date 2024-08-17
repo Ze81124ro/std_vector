@@ -1,6 +1,15 @@
 #include "vector.hpp"
+#include <cstddef>
+#include <initializer_list>
 #include <iterator>
+#include <memory>
 #include <type_traits>
+#include <Utility>
+
+template <class T, class Alloc>
+constexpr Alloc Vector<T, Alloc>::copy_allocator() const {
+    return AllocTraits::select_on_container_copy_construction(alloc);
+}
 
 template <class T, class Alloc> 
 constexpr Vector<T, Alloc>::Vector(const Alloc& alloc) noexcept
@@ -20,7 +29,9 @@ constexpr Vector<T, Alloc>::Vector(size_t sz, const T& val, const Alloc& alloc)
         try {
             AllocTraits::construct(alloc, ptr + i, val);
         } catch(...) {
-            AllocTraits::deallocate(alloc, ptr, cap);
+            try {
+                AllocTraits::deallocate(alloc, ptr, cap);
+            } catch(...) {}
             throw;
         }
     }
@@ -42,24 +53,32 @@ template <class T, class Alloc>
 template <class InputIt>
 constexpr Vector<T, Alloc>::Vector(InputIt first, InputIt last, const Alloc& alloc)
 : alloc(alloc) {
-    using category = typename std::iterator_traits<InputIt>::iterator_category;
-    if constexpr (std::is_base_of_v<category, std::random_access_iterator_tag>)
-        sz = last - first;
-    else
-        sz = std::distance(first, last);
+    sz = std::distance(first, last);
     while (sz > cap)
         cap *= GROWTH_RATE;
     ptr = AllocTraits::allocate(alloc, cap);
-    size_t i  = 0;
-    while (first != last) {
-        try {
-            AllocTraits::construct(alloc, ptr + i, *first)
-            ++first;
+    size_t i = 0;
+    try {
+        bool condition = first != last;
+        while (condition) {
+            AllocTraits::construct(alloc, ptr + i, *first);
             ++i;
-        } catch(...) {
-            AllocTraits::deallocate(alloc, ptr, cap);
-            throw;
+            ++first;
+            condition = first != last;
         }
+    } catch(...) {
+        while (i) {
+            --i;
+            try {
+                AllocTraits::destroy(alloc, ptr + i);
+            } catch(...) {
+                break;
+            }
+        }
+        try {
+            AllocTraits::deallocate(alloc, ptr, cap);
+        } catch(...) {}
+        throw;
     }
 }
 
@@ -67,6 +86,67 @@ template <class T, class Alloc>
 template <class InputIt>
 constexpr Vector<T, Alloc>::Vector(InputIt first, InputIt last)
 : Vector(first, last, Alloc()) {}
+
+template <class T, class Alloc>
+constexpr Vector<T, Alloc>::Vector(std::initializer_list<T> init, const Alloc& alloc)
+: Vector(init.begin(), init.end(), alloc) {}
+
+template <class T, class Alloc>
+constexpr Vector<T, Alloc>::Vector(std::initializer_list<T> init)
+: Vector(init, Alloc()) {}
+
+template <class T, class Alloc>
+constexpr Vector<T, Alloc>::Vector(const Vector& other)
+: sz(other.sz), cap(other.cap), 
+alloc(other.copy_allocator()), 
+ptr(AllocTraits::allocate(alloc, cap)) {
+    for (size_t i = 0; i < sz; ++i) {
+        try {
+            AllocTraits::construct(alloc, ptr + i, *(other.ptr + i));
+        } catch(...) {
+            while (i) {
+                --i;
+                try {
+                    AllocTraits::destroy(alloc, ptr + i);
+                } catch(...) {
+                    break;
+                }
+            }
+            try {
+                AllocTraits::deallocate(alloc, ptr, cap);
+            } catch(...) {}
+            throw;
+        }
+    }
+}
+
+template <class T, class Alloc>
+constexpr Vector<T, Alloc>::Vector(Vector&& other) noexcept
+: Vector() {
+    swap(other);
+}
+
+template <class T, class Alloc>
+Vector<T, Alloc>::~Vector() {
+    for (size_t i = 0; i < sz; ++i) {
+        try {
+            AllocTraits::destroy(alloc, ptr + i);
+        } catch(...) {
+            break;
+        }
+    }
+    try {
+        AllocTraits::deallocate(alloc, ptr, cap);
+    } catch(...) {}
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::swap(const Vector& other) noexcept -> void {
+    std::swap(sz, other.sz);
+    std::swap(cap, other.cap);
+    std::swap(alloc, other.alloc);
+    std::swap(ptr, other.ptr);
+}
 
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::begin() noexcept -> T* {
