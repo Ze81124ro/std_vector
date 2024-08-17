@@ -3,6 +3,7 @@
 #define VECTOR_H
 
 #include <cstddef>
+#include <initializer_list>
 #include <iterator>
 #include <memory>
 
@@ -31,6 +32,12 @@ public:
     constexpr Vector(InputIt first, InputIt last, const Alloc& alloc);
     template <class InputIt>
     constexpr Vector(InputIt first, InputIt last);
+    constexpr Vector(std::initializer_list<T> init, const Alloc& alloc);
+    constexpr Vector(std::initializer_list<T> init);
+    constexpr Vector(const Vector& other);
+    constexpr Vector(Vector&& other) noexcept;
+    ~Vector();
+    constexpr void swap(const Vector& other) noexcept;
     constexpr T* begin() noexcept;
     constexpr T* end() noexcept;
     constexpr const T* cbegin() const noexcept;
@@ -41,6 +48,7 @@ public:
     constexpr const reverse_iterator crend() const noexcept;
 private:
     using AllocTraits = std::allocator_traits<Alloc>;
+    constexpr Alloc copy_allocator() const;
     const size_t INITIAL_CAP = 4;
     const size_t GROWTH_RATE = 2;
     size_t sz;
