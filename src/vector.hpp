@@ -37,7 +37,26 @@ public:
     constexpr Vector(const Vector& other);
     constexpr Vector(Vector&& other) noexcept;
     ~Vector();
-    constexpr void swap(const Vector& other) noexcept;
+    constexpr Vector& operator=(const Vector& rhs);
+    constexpr Vector& operator=(Vector&& other);
+    constexpr void swap(Vector& other) noexcept;
+    constexpr size_t size() const noexcept;
+    constexpr bool empty() const noexcept;
+    constexpr size_t capacity() const noexcept;
+    constexpr const T& front() const noexcept;
+    constexpr T& front() noexcept;
+    constexpr const T& back() const noexcept;
+    constexpr T& back() noexcept;
+    constexpr const T* data() const noexcept;
+    constexpr T* data() noexcept;
+    constexpr const T& operator[](size_t idx) const noexcept;
+    constexpr T& operator[](size_t idx) noexcept;
+    constexpr const T& at(size_t idx) const;
+    constexpr T& at(size_t idx);
+    constexpr void reserve(size_t new_cap);
+    constexpr void shrink_to_fit();
+    constexpr void resize(size_t new_sz, const T& val);
+    constexpr void resize(size_t new_sz);
     constexpr T* begin() noexcept;
     constexpr T* end() noexcept;
     constexpr const T* cbegin() const noexcept;
@@ -48,12 +67,11 @@ public:
     constexpr const reverse_iterator crend() const noexcept;
 private:
     using AllocTraits = std::allocator_traits<Alloc>;
-    constexpr Alloc copy_allocator() const;
     const size_t INITIAL_CAP = 4;
     const size_t GROWTH_RATE = 2;
     size_t sz;
     size_t cap = INITIAL_CAP;
-    const Alloc& alloc;
+    Alloc alloc;
     T* ptr = nullptr;
 };
 
