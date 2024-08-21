@@ -18,10 +18,11 @@ constexpr auto copy_allocator(const Vector<T, Alloc>& vec) -> Alloc {
 
 template <class T, class Alloc>
 constexpr auto destroy_before(Alloc& alloc, T* buf, size_t cap, size_t i) -> void {
+    using AllocTraits = std::allocator_traits<Alloc>;
     while (i) {
         --i;
         try {
-            AllocTraits::destroy(alloc, ptr + i);
+            AllocTraits::destroy(alloc, buf + i);
         } catch(...) {
             break;
         }
@@ -32,7 +33,7 @@ constexpr auto destroy_before(Alloc& alloc, T* buf, size_t cap, size_t i) -> voi
 }
 
 template <class T, class Alloc>
-constexpr auto reserve_strict(Alloc& alloc, T*& ptr, size_t& cap, size_t new_cap) -> void {
+constexpr auto reserve_strict(Alloc& alloc, T*& ptr, size_t sz, size_t& cap, size_t new_cap) -> void {
     using AllocTraits = std::allocator_traits<Alloc>;
     T* buf = AllocTraits::allocate(alloc, new_cap);
     for (size_t i = 0; i < sz; ++i) {
@@ -232,7 +233,7 @@ constexpr auto Vector<T, Alloc>::operator[](size_t idx) noexcept -> T& {
 }
 
 template <class T, class Alloc>
-constexpr auto Vector<T, Alloc>::at(size_t idx) const noexcept -> const T& {
+constexpr auto Vector<T, Alloc>::at(size_t idx) const -> const T& {
     if (idx >= sz) {
         char* buf;
         sprintf(buf, OUT_OF_RANGE_MSG, idx, sz);
@@ -242,7 +243,7 @@ constexpr auto Vector<T, Alloc>::at(size_t idx) const noexcept -> const T& {
 }
 
 template <class T, class Alloc>
-constexpr auto Vector<T, Alloc>::at(size_t idx) noexcept -> T& {
+constexpr auto Vector<T, Alloc>::at(size_t idx) -> T& {
     if (idx >= sz) {
         char* buf;
         sprintf(buf, OUT_OF_RANGE_MSG, idx, sz);
@@ -254,22 +255,22 @@ constexpr auto Vector<T, Alloc>::at(size_t idx) noexcept -> T& {
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::reserve(size_t new_cap) -> void {
     if (new_cap <= cap) 
-        return
+        return;
     size_t buf_cap = cap;
     while (new_cap > buf_cap)
         buf_cap *= GROWTH_RATE;
-    reserve_strict(alloc, ptr, cap, buf_cap);
+    reserve_strict(alloc, ptr, sz, cap, buf_cap);
 }
 
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::shrink_to_fit() -> void {
-    reserve_strict(alloc, ptr, cap, sz);
+    reserve_strict(alloc, ptr, sz, cap, sz);
 }
 
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::resize(size_t new_sz, const T& val) -> void {
     if (sz == new_sz)
-        return
+        return;
     size_t new_cap = cap;
     while (new_sz > new_cap)
         new_cap *= GROWTH_RATE;
