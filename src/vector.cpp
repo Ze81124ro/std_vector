@@ -151,14 +151,14 @@ Vector<T, Alloc>::~Vector() {
 }
 
 template <class T, class Alloc>
-constexpr auto Vector<T, Alloc>::operator=(const Vector& other) -> Vector& {
+constexpr auto Vector<T, Alloc>::operator=(const Vector& other) & -> Vector& {
     Vector<T, Alloc> copy = other;
     swap(copy);
     return *this;
 }
 
 template <class T, class Alloc>
-constexpr auto Vector<T, Alloc>::operator=(Vector&& other) -> Vector& {
+constexpr auto Vector<T, Alloc>::operator=(Vector&& other) & -> Vector& {
     Vector<T, Alloc> empty;
     swap(empty);
     swap(other);
@@ -166,7 +166,7 @@ constexpr auto Vector<T, Alloc>::operator=(Vector&& other) -> Vector& {
 }
 
 template <class T, class Alloc>
-constexpr auto Vector<T, Alloc>::swap(Vector& other) noexcept -> void {
+constexpr auto Vector<T, Alloc>::swap(Vector& other) & noexcept -> void {
     std::swap(sz, other.sz);
     std::swap(cap, other.cap);
     std::swap(alloc, other.alloc);
