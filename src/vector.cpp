@@ -97,21 +97,17 @@ constexpr Vector<T, Alloc>::Vector(size_t sz)
 template <class T, class Alloc>
 template <class InputIt>
 constexpr Vector<T, Alloc>::Vector(InputIt first, InputIt last, const Alloc& alloc)
-: alloc(alloc) {
-    sz = std::distance(first, last);
+: sz(std::distance(first, last)), alloc(alloc) {
     while (sz > cap)
         cap *= GROWTH_RATE;
     ptr = AllocTraits::allocate(alloc, cap);
-    size_t i = 0;
-    try {
-        while (first != last) {
+    for (size_t i = 0; i < sz; ++i, ++first) {
+        try {
             AllocTraits::construct(alloc, ptr + i, *first);
-            ++i;
-            ++first;
+        } catch(...) {
+            destroy_before(alloc, ptr, cap, i);
+            throw;
         }
-    } catch(...) {
-        destroy_before(alloc, ptr, cap, i);
-        throw;
     }
 }
 
@@ -193,6 +189,11 @@ constexpr auto Vector<T, Alloc>::capacity() const noexcept -> size_t {
 }
 
 template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::get_allocator() const noexcept -> Alloc {
+    return alloc;
+}
+
+template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::front() const noexcept -> const T& {
     return ptr[0];
 }
@@ -253,6 +254,22 @@ constexpr auto Vector<T, Alloc>::at(size_t idx) -> T& {
 }
 
 template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::assign(size_t new_sz, const T& val) -> void {
+    *this = Vector(new_sz, val);
+}
+
+template <class T, class Alloc>
+template <class InputIt>
+constexpr auto Vector<T, Alloc>::assign(InputIt first, InputIt last) -> void {
+    *this = Vector(first, last);
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::assign(std::initializer_list<T> init) -> void {
+    *this = Vector(init);
+}
+
+template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::reserve(size_t new_cap) -> void {
     if (new_cap <= cap) 
         return;
@@ -293,6 +310,174 @@ constexpr auto Vector<T, Alloc>::resize(size_t new_sz, const T& val) -> void {
     ptr = buf;
     sz = new_sz;
     cap = new_cap;
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::resize(size_t new_sz) -> void {
+    resize(new_sz, T());
+}
+
+template <class T, class Alloc>
+template <class... Args>
+constexpr auto Vector<T, Alloc>::emplace(const T* pos, Args&&... args) -> T* {
+    if (pos == cend())
+        emplace_back(std::forward<Args>(args)...);
+    size_t new_cap = cap;
+    if (sz + 1 > new_cap)
+        new_cap *= GROWTH_RATE;
+    T* buf = AllocTraits::allocate(alloc, new_cap);
+    const T* iter = cbegin();
+    for (size_t i = 0; i <= sz; ++i, ++iter) {
+        try {
+            if (iter < pos) {
+                AllocTraits::construct(alloc, buf + i, ptr[i]);
+                continue;
+            }
+            if (iter > pos) {
+                AllocTraits::construct(alloc, buf + i, ptr[i]);
+                continue;
+            }
+            AllocTraits::construct(alloc, buf + i, std::forward<Args>(args)...);
+        } catch(...) {
+            destroy_before(alloc, buf, new_cap, i);
+            throw;
+        }
+    }
+    try {
+        AllocTraits::deallocate(alloc, ptr, cap);
+    } catch(...) {
+        destroy_before(alloc, buf, new_cap, sz + 1);
+        throw;
+    }
+    T* res = buf + (pos - ptr);
+    ptr = buf;
+    ++sz;
+    cap = new_cap;
+    return res;
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::insert(const T* pos, const T& val) -> T* {
+    return emplace(pos, val);
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::insert(const T* pos, T&& val) -> T* {
+    return emplace(pos, std::move_if_noexcept(val));
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::insert(const T* pos, size_t new_sz, const T& val) -> T* {
+    if (new_sz == 0)
+        return pos;
+    T* res = pos;
+    for (size_t i = 0; i < new_sz; ++i) {
+        try {
+            res = insert(res + 1, val);
+        } catch(...) {
+            try {
+                erase(res - i, res);
+            } catch(...) {}
+            throw;
+        }
+    }
+    return res - new_sz + 1;
+}
+
+template <class T, class Alloc>
+template <class InputIt>
+constexpr auto Vector<T, Alloc>::insert(const T* pos, InputIt first, InputIt last) -> T* {
+    if (first == last)
+        return pos;
+    size_t new_sz = std::distance(first, last);
+    T* res = pos;
+    for (size_t i = 0; i < new_sz; ++i, ++first) {
+        try {
+            res = insert(res + 1, *first);
+        } catch(...) {
+            try {
+                erase(res - i, res);
+            } catch(...) {}
+            throw;
+        }
+    }
+    return res - new_sz + 1;
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::insert(const T* pos, std::initializer_list<T> init) -> T* {
+    return insert(pos, init.begin(), init.end());
+}
+
+template <class T, class Alloc>
+template <class... Args>
+constexpr auto Vector<T, Alloc>::emplace_back(Args&&... args) -> T& {
+    reserve(sz + 1);
+    try {
+        AllocTraits::construct(alloc, end(), std::forward<Args>(args)...);
+    } catch(...) {
+        try {
+            AllocTraits::destroy(alloc, end());
+        } catch(...) {}
+        throw;
+    }
+    ++sz;
+    return back();
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::push_back(const T& val) -> void {
+    emplace_back(val);
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::push_back(T&& val) -> void {
+    emplace_back(std::move_if_noexcept(val));
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::erase(const T* pos) -> T* {
+    return erase(pos, pos + 1);
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::erase(const T* first, const T* last) -> T* {
+    size_t new_sz = std::distance(first, last);
+    T* buf = AllocTraits::allocate(alloc, cap);
+    T* iter = cbegin();
+    for (size_t i = 0; i < sz; ++i, ++iter) {
+        try {
+            if (iter < first) {
+                AllocTraits::construct(alloc, buf + i, ptr[i]);
+            }
+            if (iter >= last) {
+                AllocTraits::construct(alloc, buf - new_sz + i, ptr[i]);
+            }
+        } catch(...) {
+            destroy_before(alloc, buf, cap, iter < first ? i : i - new_sz);
+            throw;
+        }
+    }
+    try {
+        AllocTraits::deallocate(alloc, ptr, cap);
+    } catch(...) {
+        destroy_before(alloc, buf, cap, sz - 1);
+        throw;
+    }
+    T* res = buf + (last - ptr);
+    ptr = buf;
+    sz -= new_sz;
+    return res;
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::pop_back() -> void {
+    erase(cend() - 1);
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::clear() -> void {
+    erase(cbegin(), cend());
 }
 
 template <class T, class Alloc>
