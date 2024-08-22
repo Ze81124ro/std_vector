@@ -43,6 +43,7 @@ public:
     constexpr size_t size() const noexcept;
     constexpr bool empty() const noexcept;
     constexpr size_t capacity() const noexcept;
+    constexpr Alloc get_allocator() const noexcept;
     constexpr const T& front() const noexcept;
     constexpr T& front() noexcept;
     constexpr const T& back() const noexcept;
@@ -53,10 +54,30 @@ public:
     constexpr T& operator[](size_t idx) noexcept;
     constexpr const T& at(size_t idx) const;
     constexpr T& at(size_t idx);
+    constexpr void assign(size_t new_sz, const T& val);
+    template <class InputIt>
+    constexpr void assign(InputIt first, InputIt last);
+    constexpr void assign(std::initializer_list<T> init);
     constexpr void reserve(size_t new_cap);
     constexpr void shrink_to_fit();
     constexpr void resize(size_t new_sz, const T& val);
     constexpr void resize(size_t new_sz);
+    template <class... Args>
+    constexpr T* emplace(const T* pos, Args&&... args);
+    constexpr T* insert(const T* pos, const T& val);
+    constexpr T* insert(const T* pos, T&& val);
+    constexpr T* insert(const T* pos, size_t new_sz, const T& val);
+    template <class InputIt>
+    constexpr T* insert(const T* pos, InputIt first, InputIt last);
+    constexpr T* insert(const T* pos, std::initializer_list<T> init);
+    template <class... Args>
+    constexpr T& emplace_back(Args&&... args);
+    constexpr void push_back(const T& val);
+    constexpr void push_back(T&& val);
+    constexpr T* erase(const T* pos);
+    constexpr T* erase(const T* first, const T* last);
+    constexpr void pop_back();
+    constexpr void clear();
     constexpr T* begin() noexcept;
     constexpr T* end() noexcept;
     constexpr const T* cbegin() const noexcept;
