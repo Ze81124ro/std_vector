@@ -37,9 +37,9 @@ public:
     constexpr Vector(const Vector& other);
     constexpr Vector(Vector&& other) noexcept;
     ~Vector();
-    constexpr Vector& operator=(const Vector& rhs);
-    constexpr Vector& operator=(Vector&& other);
-    constexpr void swap(Vector& other) noexcept;
+    constexpr Vector& operator=(const Vector& rhs) &;
+    constexpr Vector& operator=(Vector&& other) &;
+    constexpr void swap(Vector& other) & noexcept;
     constexpr size_t size() const noexcept;
     constexpr bool empty() const noexcept;
     constexpr size_t capacity() const noexcept;
