@@ -3,6 +3,7 @@
 #define VECTOR_H
 
 #include <cstddef>
+#include <compare>
 #include <initializer_list>
 #include <iterator>
 #include <memory>
@@ -95,6 +96,23 @@ private:
     Alloc alloc;
     T* ptr = nullptr;
 };
+
+template <class T, class Alloc>
+constexpr bool operator==(const Vector<T, Alloc>& lhs, const Vector<T, Alloc>& rhs);
+
+template <class T, class Alloc>
+constexpr std::strong_ordering operator<=>(const Vector<T, Alloc>& lhs, const Vector<T, Alloc>& rhs);
+
+template <class T, class Alloc, class U = T>
+constexpr size_t erase(Vector<T, Alloc>& vec, const U& val);
+
+template <class T, class Alloc, class Pred>
+constexpr size_t erase_if(Vector<T, Alloc>& vec, Pred pred);
+
+namespace std {
+    template <class T, class Alloc>
+    constexpr void swap(Vector<T, Alloc>& lhs, Vector<T, Alloc>& rhs);
+}
 
 #include "vector.cpp"
 
