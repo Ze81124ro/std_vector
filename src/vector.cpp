@@ -1,6 +1,8 @@
 #include "vector.hpp"
 #include <cstddef>
 #include <cstdio>
+#include <algorithm>
+#include <compare>
 #include <initializer_list>
 #include <iterator>
 #include <memory>
@@ -8,50 +10,71 @@
 #include <type_traits>
 #include <utility>
 
-static const char* OUT_OF_RANGE_MSG = "Index %zu is greater or equal to Vector size %zu in Vector::at.";
+namespace {
+    static const char* OUT_OF_RANGE_MSG = "Index %zu is greater or equal to Vector size %zu in Vector::at.";
 
-template <class T, class Alloc>
-constexpr auto copy_allocator(const Vector<T, Alloc>& vec) -> Alloc {
-    using AllocTraits = std::allocator_traits<Alloc>;
-    return AllocTraits::select_on_container_copy_construction(vec.get_allocator());
-}
-
-template <class T, class Alloc>
-constexpr auto destroy_before(Alloc& alloc, T* buf, size_t cap, size_t i) -> void {
-    using AllocTraits = std::allocator_traits<Alloc>;
-    while (i) {
-        --i;
-        try {
-            AllocTraits::destroy(alloc, buf + i);
-        } catch(...) {
-            break;
-        }
+    template <class T, class Alloc>
+    constexpr auto copy_allocator(const Vector<T, Alloc>& vec) -> Alloc {
+        using AllocTraits = std::allocator_traits<Alloc>;
+        return AllocTraits::select_on_container_copy_construction(vec.get_allocator());
     }
-    try {
-        AllocTraits::deallocate(alloc, buf, cap);
-    } catch(...) {}
+
+    template <class T, class Alloc>
+    constexpr auto destroy_before(Alloc& alloc, T* buf, size_t cap, size_t i) -> void {
+        using AllocTraits = std::allocator_traits<Alloc>;
+        while (i) {
+            --i;
+            try {
+                AllocTraits::destroy(alloc, buf + i);
+            } catch(...) {
+                break;
+            }
+        }
+        try {
+            AllocTraits::deallocate(alloc, buf, cap);
+        } catch(...) {}
+    }
+
+    template <class T, class Alloc>
+    constexpr auto reserve_strict(Alloc& alloc, T*& ptr, size_t sz, size_t& cap, size_t new_cap) -> void {
+        using AllocTraits = std::allocator_traits<Alloc>;
+        T* buf = AllocTraits::allocate(alloc, new_cap);
+        for (size_t i = 0; i < sz; ++i) {
+            try {
+                AllocTraits::construct(alloc, buf + i, ptr[i]);
+            } catch(...) {
+                destroy_before(alloc, buf, new_cap, i);
+                throw;
+            }
+        }
+        try {
+            AllocTraits::deallocate(alloc, ptr, cap);
+        } catch(...) {
+            destroy_before(alloc, buf, new_cap, sz);
+            throw;
+        }
+        ptr = buf;
+        cap = new_cap;
+    }
 }
 
 template <class T, class Alloc>
-constexpr auto reserve_strict(Alloc& alloc, T*& ptr, size_t sz, size_t& cap, size_t new_cap) -> void {
-    using AllocTraits = std::allocator_traits<Alloc>;
-    T* buf = AllocTraits::allocate(alloc, new_cap);
-    for (size_t i = 0; i < sz; ++i) {
+template <class InputIt>
+constexpr Vector<T, Alloc>::Vector(InputIt first, InputIt last, const Alloc& alloc, bool copy)
+: alloc(alloc), sz(std::distance(first, last) * copy), cap(INITIAL_CAP * copy) {
+    if (!copy) 
+        return;
+    while (sz > cap)
+        cap *= GROWTH_RATE;
+    ptr = AllocTraits::allocate(alloc, cap);
+    for (size_t i = 0; i < sz; ++i, ++first) {
         try {
-            AllocTraits::construct(alloc, buf + i, ptr[i]);
+            AllocTraits::construct(alloc, ptr + i, *first);
         } catch(...) {
-            destroy_before(alloc, buf, new_cap, i);
+            destroy_before(alloc, ptr, cap, i);
             throw;
         }
     }
-    try {
-        AllocTraits::deallocate(alloc, ptr, cap);
-    } catch(...) {
-        destroy_before(alloc, buf, new_cap, sz);
-        throw;
-    }
-    ptr = buf;
-    cap = new_cap;
 }
 
 template <class InputIt, class Alloc>
@@ -60,7 +83,7 @@ Vector(InputIt first, InputIt last, const Alloc& alloc)
 
 template <class T, class Alloc> 
 constexpr Vector<T, Alloc>::Vector(const Alloc& alloc) noexcept
-: sz(0), cap(0), alloc(alloc) {}
+: alloc(alloc), sz(0), cap(0) {}
 
 template <class T, class Alloc>
 constexpr Vector<T, Alloc>::Vector() noexcept(noexcept(Alloc()))
@@ -68,7 +91,7 @@ constexpr Vector<T, Alloc>::Vector() noexcept(noexcept(Alloc()))
 
 template <class T, class Alloc>
 constexpr Vector<T, Alloc>::Vector(size_t sz, const T& val, const Alloc& alloc)
-: sz(sz), alloc(alloc) {
+: alloc(alloc), sz(sz) {
     while (sz > cap)
         cap *= GROWTH_RATE;
     ptr = AllocTraits::allocate(alloc, cap);
@@ -97,19 +120,7 @@ constexpr Vector<T, Alloc>::Vector(size_t sz)
 template <class T, class Alloc>
 template <class InputIt>
 constexpr Vector<T, Alloc>::Vector(InputIt first, InputIt last, const Alloc& alloc)
-: sz(std::distance(first, last)), alloc(alloc) {
-    while (sz > cap)
-        cap *= GROWTH_RATE;
-    ptr = AllocTraits::allocate(alloc, cap);
-    for (size_t i = 0; i < sz; ++i, ++first) {
-        try {
-            AllocTraits::construct(alloc, ptr + i, *first);
-        } catch(...) {
-            destroy_before(alloc, ptr, cap, i);
-            throw;
-        }
-    }
-}
+: Vector(first, last, alloc, true) {}
 
 template <class T, class Alloc>
 template <class InputIt>
@@ -126,22 +137,27 @@ constexpr Vector<T, Alloc>::Vector(std::initializer_list<T> init)
 
 template <class T, class Alloc>
 constexpr Vector<T, Alloc>::Vector(const Vector& other)
-: sz(other.sz), cap(other.cap), 
-alloc(other.copy_allocator()), 
-ptr(AllocTraits::allocate(alloc, cap)) {
-    for (size_t i = 0; i < sz; ++i) {
-        try {
-            AllocTraits::construct(alloc, ptr + i, other.ptr[i]);
-        } catch(...) {
-            destroy_before(alloc, ptr, cap, i);
-            throw;
-        }
-    }
-}
+: Vector(other, other.copy_allocator()) {}
+
+template <class T, class Alloc>
+constexpr Vector<T, Alloc>::Vector(const Vector& other, const Alloc& alloc)
+: Vector(other.cbegin(), other.cend(), alloc) {}
 
 template <class T, class Alloc>
 constexpr Vector<T, Alloc>::Vector(Vector&& other) noexcept
-: Vector() {
+: Vector(other.alloc) {
+    swap(other);
+}
+
+template <class T, class Alloc>
+constexpr Vector<T, Alloc>::Vector(Vector&& other, const Alloc& alloc)
+: Vector(
+std::make_move_iterator(other.cbegin()),
+std::make_move_iterator(other.cend()),
+alloc,
+&alloc == &other.alloc) {
+    if (&alloc != &other.alloc)
+        return;
     swap(other);
 }
 
@@ -152,16 +168,19 @@ Vector<T, Alloc>::~Vector() {
 
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::operator=(const Vector& other) & -> Vector& {
-    Vector<T, Alloc> copy = other;
+    bool propagate = typename AllocTraits::propagate_on_container_copy_assignment();
+    Vector<T, Alloc> copy(other, propagate ? other.alloc : alloc);
     swap(copy);
     return *this;
 }
 
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::operator=(Vector&& other) & -> Vector& {
+    bool propagate = typename AllocTraits::propagate_on_container_move_assignment();
+    Vector<T, Alloc> copy(other, propagate ? other.alloc : alloc);
     Vector<T, Alloc> empty;
-    swap(empty);
-    swap(other);
+    swap(copy);
+    other.swap(empty);
     return *this;
 }
 
@@ -518,4 +537,53 @@ constexpr auto Vector<T, Alloc>::rend() noexcept -> reverse_iterator {
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::crend() const noexcept -> const reverse_iterator {
     return cbegin();
+}
+
+template <class T, class Alloc>
+constexpr auto operator==(const Vector<T, Alloc>& lhs, const Vector<T, Alloc>& rhs) -> bool {
+    if (lhs.size() != rhs.size())
+        return false;
+    for (size_t i = 0; i < lhs.size(); ++i)
+        if (lhs[i] != rhs[i])
+            return false;
+    return true;
+}
+
+template <class T, class Alloc>
+constexpr auto operator<=>(const Vector<T, Alloc>& lhs, const Vector<T, Alloc>& rhs)
+-> std::strong_ordering {
+    for (size_t i = 0; i < std::min(lhs.size(), rhs.size()); ++i) {
+        std::strong_ordering elem_order = lhs[i] <=> rhs[i];
+        if (elem_order != 0)
+            return elem_order;
+    }
+    std::strong_ordering sz_order = lhs.size() <=> rhs.size();
+    return sz_order;
+}
+
+template <class T, class Alloc, class Pred>
+constexpr auto erase_if(Vector<T, Alloc>& vec, Pred pred) -> size_t {
+    size_t res = 0;
+    for (size_t i = 0; i < vec.size(); ++i) {
+        if (pred(vec[i])) {
+            vec.erase(vec.begin() + i);
+            ++i;
+            ++res;
+        }
+    }
+    return res;
+}
+
+template <class T, class Alloc, class U>
+constexpr auto erase(Vector<T, Alloc>& vec, const U& val) -> size_t {
+    return erase_if(vec, [val] (const T& elem) -> bool {
+        return elem = val;
+    });
+}
+
+namespace std {
+    template <class T, class Alloc>
+    constexpr auto swap(Vector<T, Alloc>& lhs, Vector<T, Alloc>& rhs) -> void {
+        lhs.swap(rhs);
+    }
 }
