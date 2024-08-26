@@ -36,7 +36,9 @@ public:
     constexpr Vector(std::initializer_list<T> init, const Alloc& alloc);
     constexpr Vector(std::initializer_list<T> init);
     constexpr Vector(const Vector& other);
+    constexpr Vector(const Vector& other, const Alloc& alloc);
     constexpr Vector(Vector&& other) noexcept;
+    constexpr Vector(Vector&& other, const Alloc& alloc);
     ~Vector();
     constexpr Vector& operator=(const Vector& rhs) &;
     constexpr Vector& operator=(Vector&& other) &;
@@ -89,11 +91,13 @@ public:
     constexpr const reverse_iterator crend() const noexcept;
 private:
     using AllocTraits = std::allocator_traits<Alloc>;
-    const size_t INITIAL_CAP = 4;
-    const size_t GROWTH_RATE = 2;
+    template <class InputIt>
+    constexpr Vector(InputIt first, InputIt last, const Alloc& alloc, bool copy);
+    static const size_t INITIAL_CAP = 4;
+    static const size_t GROWTH_RATE = 2;
+    Alloc alloc;
     size_t sz;
     size_t cap = INITIAL_CAP;
-    Alloc alloc;
     T* ptr = nullptr;
 };
 
