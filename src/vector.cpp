@@ -81,13 +81,13 @@ template <class InputIt, class Alloc>
 Vector(InputIt first, InputIt last, const Alloc& alloc) 
 -> Vector<typename std::iterator_traits<InputIt>::value_type, Alloc>;
 
-template <class T, class Alloc> 
-constexpr Vector<T, Alloc>::Vector(const Alloc& alloc) noexcept
-: alloc(alloc), sz(0), cap(0) {}
-
 template <class T, class Alloc>
 constexpr Vector<T, Alloc>::Vector() noexcept(noexcept(Alloc()))
 : Vector(Alloc()) {}
+
+template <class T, class Alloc> 
+constexpr Vector<T, Alloc>::Vector(const Alloc& alloc) noexcept
+: alloc(alloc), cap(0) {}
 
 template <class T, class Alloc>
 constexpr Vector<T, Alloc>::Vector(size_t sz, const T& val, const Alloc& alloc)
@@ -111,7 +111,19 @@ constexpr Vector<T, Alloc>::Vector(size_t sz, const T& val)
 
 template <class T, class Alloc>
 constexpr Vector<T, Alloc>::Vector(size_t sz, const Alloc& alloc)
-: Vector(sz, T(), alloc) {}
+: alloc(alloc), sz(sz) {
+    while (sz > cap)
+        cap *= GROWTH_RATE;
+    ptr = AllocTraits::allocate(alloc, cap);
+    for (size_t i = 0; i < sz; ++i) {
+        try {
+            AllocTraits::construct(alloc, ptr + i);
+        } catch(...) {
+            destroy_before(alloc, ptr, cap, i);
+            throw;
+        }
+    }
+}
 
 template <class T, class Alloc>
 constexpr Vector<T, Alloc>::Vector(size_t sz)
@@ -168,27 +180,39 @@ Vector<T, Alloc>::~Vector() {
 
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::operator=(const Vector& other) & -> Vector& {
-    bool propagate = typename AllocTraits::propagate_on_container_copy_assignment();
-    Vector<T, Alloc> copy(other, propagate ? other.alloc : alloc);
-    swap(copy);
+    constexpr bool propagate = typename AllocTraits::propagate_on_container_copy_assignment();
+    if constexpr (propagate) {
+        Vector<T, Alloc> copy(other, other.alloc);
+        swap(copy);
+    } else {
+        Vector<T, Alloc> copy(other, alloc);
+        swap(copy);
+    }
     return *this;
 }
 
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::operator=(Vector&& other) & -> Vector& {
-    bool propagate = typename AllocTraits::propagate_on_container_move_assignment();
-    Vector<T, Alloc> copy(other, propagate ? other.alloc : alloc);
+    constexpr bool propagate = typename AllocTraits::propagate_on_container_move_assignment();
     Vector<T, Alloc> empty;
-    swap(copy);
+    if constexpr (propagate) {
+        Vector<T, Alloc> copy(other, other.alloc);
+        swap(copy);
+    } else {
+        Vector<T, Alloc> copy(other, alloc);
+        swap(copy);
+    }
     other.swap(empty);
     return *this;
 }
 
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::swap(Vector& other) & noexcept -> void {
+    constexpr bool propagate = typename AllocTraits::propagate_on_container_swap();
+    if constexpr (propagate)
+        std::swap(alloc, other.alloc);
     std::swap(sz, other.sz);
     std::swap(cap, other.cap);
-    std::swap(alloc, other.alloc);
     std::swap(ptr, other.ptr);
 }
 
@@ -500,6 +524,11 @@ constexpr auto Vector<T, Alloc>::clear() -> void {
 }
 
 template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::begin() const noexcept -> const T* {
+    return ptr;
+}
+
+template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::begin() noexcept -> T* {
     return ptr;
 }
@@ -507,6 +536,11 @@ constexpr auto Vector<T, Alloc>::begin() noexcept -> T* {
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::cbegin() const noexcept -> const T* {
     return ptr;
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::rbegin() const noexcept -> const reverse_iterator {
+    return cend();
 }
 
 template <class T, class Alloc>
@@ -520,6 +554,11 @@ constexpr auto Vector<T, Alloc>::crbegin() const noexcept -> const reverse_itera
 }
 
 template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::end() const noexcept -> const T* {
+    return ptr + sz;
+}
+
+template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::end() noexcept -> T* {
     return ptr + sz;
 }
@@ -527,6 +566,11 @@ constexpr auto Vector<T, Alloc>::end() noexcept -> T* {
 template <class T, class Alloc>
 constexpr auto Vector<T, Alloc>::cend() const noexcept -> const T* {
     return ptr + sz;
+}
+
+template <class T, class Alloc>
+constexpr auto Vector<T, Alloc>::rend() const noexcept -> const reverse_iterator {
+    return cbegin();
 }
 
 template <class T, class Alloc>
@@ -551,7 +595,7 @@ constexpr auto operator==(const Vector<T, Alloc>& lhs, const Vector<T, Alloc>& r
 
 template <class T, class Alloc>
 constexpr auto operator<=>(const Vector<T, Alloc>& lhs, const Vector<T, Alloc>& rhs)
--> std::strong_ordering {
+-> std::weak_ordering {
     for (size_t i = 0; i < std::min(lhs.size(), rhs.size()); ++i) {
         std::strong_ordering elem_order = lhs[i] <=> rhs[i];
         if (elem_order != 0)
