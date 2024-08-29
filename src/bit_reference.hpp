@@ -7,11 +7,6 @@
 #include <iterator>
 #include "vector_bool.hpp"
 
-namespace {
-    template <class Alloc>
-    using bit_reference = typename Vector<bool, Alloc>::BitReference;
-}
-
 template <class Alloc>
 class Vector<bool, Alloc>::BitReference {
 public:
@@ -32,11 +27,17 @@ public:
     constexpr BitReference operator-(size_t idx) noexcept;
     constexpr bool operator[](size_t idx) const noexcept;
     constexpr BitReference operator[](size_t idx) noexcept;
+    constexpr std::weak_ordering operator<=>(const BitReference& other) const noexcept = default;
 private:
     static const size_t BITS_IN_BYTE = 8;
     uint8_t* byte;
     uint8_t bit;
 };
+
+namespace {
+    template <class Alloc>
+    using bit_reference = typename Vector<bool, Alloc>::reference;
+}
 
 template <class Alloc>
 constexpr bit_reference<Alloc> operator+(const bit_reference<Alloc>& ref, size_t idx) noexcept;
@@ -47,18 +48,6 @@ constexpr bit_reference<Alloc> operator+(size_t idx, const bit_reference<Alloc>&
 template <class Alloc>
 constexpr ptrdiff_t operator-(
     const bit_reference<Alloc>& lhs, 
-    const bit_reference<Alloc>& rhs
-) noexcept;
-
-template <class Alloc>
-constexpr bool operator==(
-    const bit_reference<Alloc>& lhs,
-    const bit_reference<Alloc>& rhs
-) noexcept;
-
-template <class Alloc>
-constexpr bool operator<=>(
-    const bit_reference<Alloc>& lhs,
     const bit_reference<Alloc>& rhs
 ) noexcept;
 
