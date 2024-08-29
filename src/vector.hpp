@@ -81,13 +81,17 @@ public:
     constexpr T* erase(const T* first, const T* last);
     constexpr void pop_back();
     constexpr void clear();
+    constexpr const T* begin() const noexcept;
     constexpr T* begin() noexcept;
-    constexpr T* end() noexcept;
     constexpr const T* cbegin() const noexcept;
-    constexpr const T* cend() const noexcept;
+    constexpr const reverse_iterator rbegin() const noexcept;
     constexpr reverse_iterator rbegin() noexcept;
-    constexpr reverse_iterator rend() noexcept;
     constexpr const reverse_iterator crbegin() const noexcept;
+    constexpr const T* end() const noexcept;
+    constexpr T* end() noexcept;
+    constexpr const T* cend() const noexcept;
+    constexpr const reverse_iterator rend() const noexcept;
+    constexpr reverse_iterator rend() noexcept;
     constexpr const reverse_iterator crend() const noexcept;
 private:
     using AllocTraits = std::allocator_traits<Alloc>;
@@ -96,7 +100,7 @@ private:
     static const size_t INITIAL_CAP = 4;
     static const size_t GROWTH_RATE = 2;
     Alloc alloc;
-    size_t sz;
+    size_t sz = 0;
     size_t cap = INITIAL_CAP;
     T* ptr = nullptr;
 };
@@ -105,7 +109,7 @@ template <class T, class Alloc>
 constexpr bool operator==(const Vector<T, Alloc>& lhs, const Vector<T, Alloc>& rhs);
 
 template <class T, class Alloc>
-constexpr std::strong_ordering operator<=>(const Vector<T, Alloc>& lhs, const Vector<T, Alloc>& rhs);
+constexpr std::weak_ordering operator<=>(const Vector<T, Alloc>& lhs, const Vector<T, Alloc>& rhs);
 
 template <class T, class Alloc, class U = T>
 constexpr size_t erase(Vector<T, Alloc>& vec, const U& val);
