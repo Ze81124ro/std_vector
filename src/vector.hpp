@@ -1,7 +1,9 @@
-#ifndef VECTOR_H
+#ifndef VECTOR_BASE_H
 
-#define VECTOR_H
+#define VECTOR_BASE_H
 
+#include "final_helper.hpp"
+#include "util.hpp"
 #include <cstddef>
 #include <compare>
 #include <initializer_list>
@@ -9,7 +11,7 @@
 #include <memory>
 
 template <class T, class Alloc = std::allocator<T>>
-class Vector {
+class Vector: private detail::FinalHelper<Alloc> {
 public:
     using value_type = T;
     using allocator_type = Alloc;
@@ -97,13 +99,14 @@ private:
     using AllocTraits = std::allocator_traits<Alloc>;
     template <class InputIt>
     constexpr Vector(InputIt first, InputIt last, const Alloc& alloc, bool copy);
-    static const size_t INITIAL_CAP = 4;
-    static const size_t GROWTH_RATE = 2;
-    Alloc alloc;
     size_t sz = 0;
-    size_t cap = INITIAL_CAP;
+    size_t cap = 0;
     T* ptr = nullptr;
 };
+
+template <class InputIt, class _Alloc>
+Vector(InputIt first, InputIt last, const _Alloc& alloc) 
+-> Vector<typename std::iterator_traits<InputIt>::value_type, _Alloc>;
 
 template <class T, class Alloc>
 constexpr bool operator==(const Vector<T, Alloc>& lhs, const Vector<T, Alloc>& rhs);
@@ -122,6 +125,10 @@ namespace std {
     constexpr void swap(Vector<T, Alloc>& lhs, Vector<T, Alloc>& rhs);
 }
 
+#define HEADER_INCLUDES
+#ifndef IMPL_INCLUDES
 #include "vector.cpp"
+#endif
+#undef HEADER_INCLUDES
 
 #endif
